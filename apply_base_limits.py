@@ -1,11 +1,12 @@
 from modules import kubernetes_helpers
 from kubernetes import client, config
 from os.path import exists
+import sys
 import json
 import click
 import yaml
 
-NAMESPACE   = "of-services"
+NAMESPACE   = sys.argv[1]
 BASE_FOLDER = "base-limits/"
 OUTPUT_FOLDER = "output-deployments/"
 DEPLOYMENTS_TO_IGNORE = ["blu-cli", "redis", "blu-connectors"]
@@ -36,22 +37,14 @@ def update_limit(deployment, new_limits):
     deployment_yaml = yaml.dump(deployment)
     write_file(deployment_name, deployment_yaml)
 
-    kubernetes_helpers.update_deployment(deployment_name, deployment, NAMESPACE)
+    resp = kubernetes_helpers.update_deployment(deployment_name, deployment, NAMESPACE)
 
-    print("\n[INFO] deployment's container limits updated.\n")
-    print("%s\t%s\t\t\t%s\t%s" % ("NAMESPACE", "NAME", "REVISION", "IMAGE"))
-    print(
-        "%s\t\t%s\t%s\t\t%s\n"
-        % (
-            resp.metadata.namespace,
-            resp.metadata.name,
-            resp.metadata.generation,
-            resp.spec.template.spec.containers[0].image,
-        )
-    )
+    print(f"[INFO] {deployment_name} container limits updated.")
 
 def sync_base_limits():
     deployments = kubernetes_helpers.retrieve_deployments_by_ns(NAMESPACE)
+
+    sync_all = click.confirm('Sync all without confirmation?', default=False)
 
     for deployment in deployments['items']:
         deployment_spec = deployment['spec']
@@ -60,21 +53,25 @@ def sync_base_limits():
         containers = template['containers']
 
         if deployment_name in DEPLOYMENTS_TO_IGNORE:
-            print(f"Deployment {deployment_name} marked to ignore")
+            print(f"[INFO] Deployment {deployment_name} marked to ignore")
             continue
 
         if has_base_limit(deployment_name):
             base_limit = load_base_limit(deployment_name)
             old_limits = pluck(containers, 'resources')
 
-            message = "\nReview the following limits of " + deployment_name
-            message += "\n Old limits: " + json.dumps(old_limits[0], indent=2)
-            message += "\n New limits: " + json.dumps(base_limit[deployment_name], indent=2)
-            print(message)
+            sync = True
+            if sync_all == False:               
+                message = "\nReview the following limits of " + deployment_name
+                message += "\n Old limits: " + json.dumps(old_limits[0], indent=2)
+                message += "\n New limits: " + json.dumps(base_limit[deployment_name], indent=2)
+                print(message)
 
-            if click.confirm("Confirm?", default=False):
+                sync = click.confirm("Confirm?", default=False)
+
+            if sync:
                 update_limit(deployment, base_limit)
         else:
-            print(f"Deployment {deployment_name} base limit doesn't exists")
+            print(f"[WARN] Deployment {deployment_name} base limit doesn't exists")
 
 sync_base_limits()
