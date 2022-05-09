@@ -31,11 +31,16 @@ def update_limit(deployment, new_limits):
     containers = deployment['spec']['template']['spec']['containers']
     deployment_name = deployment['metadata']['name']
 
+    #backup old deployment manifest
+    write_file('old-' + deployment_name, yaml.dump(deployment))
+
     for index, container in enumerate(containers):
         deployment['spec']['template']['spec']['containers'][index]['resources'] = new_limits[container['name']]
 
     deployment_yaml = yaml.dump(deployment)
-    write_file(deployment_name, deployment_yaml)
+
+    #write new deployment manifest
+    write_file('new-' + deployment_name, deployment_yaml)
 
     resp = kubernetes_helpers.update_deployment(deployment_name, deployment, NAMESPACE)
 
