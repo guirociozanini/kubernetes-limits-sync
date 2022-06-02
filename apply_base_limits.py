@@ -9,7 +9,7 @@ import yaml
 NAMESPACE   = sys.argv[1]
 BASE_FOLDER = "base-limits/"
 OUTPUT_FOLDER = "output-deployments/"
-DEPLOYMENTS_TO_IGNORE = ["blu-cli", "redis", "blu-connectors"]
+DEPLOYMENTS_TO_IGNORE = ["blu-cli", "redis", "blu-connectors", "devops"]
 
 def has_base_limit(name):
     return exists(BASE_FOLDER + name + ".json")

@@ -1,7 +1,7 @@
 from modules import kubernetes_helpers
 import json
 
-NAMESPACE = "cd-services"
+NAMESPACE = "portal-services"
 
 def write_file(name, data):
     f_name = "base-limits/" + name + ".json"
@@ -27,4 +27,4 @@ def download_limits(namespace):
             json.dumps(deployment_parsed)
         )
 
-download_limits(namespace)
+download_limits(NAMESPACE)
